@@ -55,11 +55,14 @@ class Program
                     cue.Tracks[i].Title, artistName, cue.Title, i + 1, $"{file.DirectoryName}\\cover.jpg");
                 continue;
             }
+            
             var startIndex = cue.Tracks[i].Indices[^1];
-            var endIndex = cue.Tracks[i + 1].Indices[0];
+            var endIndex = cue.Tracks[i + 1].Indices[^1];
+            var startTimeSpan = TimeSpan.FromMinutes(startIndex.Minutes) + TimeSpan.FromSeconds(startIndex.Seconds);
+            var endTimeSpan = TimeSpan.FromMinutes(endIndex.Minutes) + TimeSpan.FromSeconds(endIndex.Seconds - 1);
             
             Split($"{file.DirectoryName}\\{audioFileName}",
-                $"{startIndex.Minutes}:{startIndex.Seconds}", $"{endIndex.Minutes}:{endIndex.Seconds + 1}",
+                $"{startTimeSpan}", $"{endTimeSpan}",
                 outDir.FullName, $"{i + 1:00} {cue.Tracks[i].Title}.flac",
                 cue.Tracks[i].Title, artistName, cue.Title, i + 1, $"{file.DirectoryName}\\cover.jpg");
         }
