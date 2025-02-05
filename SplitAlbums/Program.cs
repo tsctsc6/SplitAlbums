@@ -48,7 +48,7 @@ class Program
                 SplitLast($"{file.DirectoryName}\\{audioFileName}",
                     $"{cue.Tracks[i].Indices[^1].Minutes}:{cue.Tracks[i].Indices[^1].Seconds}",
                     outDir.FullName, $"{i + 1:00} {cue.Tracks[i].Title}.flac",
-                    cue.Tracks[i].Title, artistName, cue.Title, i + 1);
+                    cue.Tracks[i].Title, artistName, cue.Title, i + 1, $"{file.DirectoryName}\\cover.jpg");
                 continue;
             }
             var startIndex = cue.Tracks[i].Indices[^1];
@@ -57,7 +57,7 @@ class Program
             Split($"{file.DirectoryName}\\{audioFileName}",
                 $"{startIndex.Minutes}:{startIndex.Seconds}", $"{endIndex.Minutes}:{endIndex.Seconds + 1}",
                 outDir.FullName, $"{i + 1:00} {cue.Tracks[i].Title}.flac",
-                cue.Tracks[i].Title, artistName, cue.Title, i + 1);
+                cue.Tracks[i].Title, artistName, cue.Title, i + 1, $"{file.DirectoryName}\\cover.jpg");
         }
         var lastTrack = cue.Tracks[^1];
         artistName = string.IsNullOrEmpty(lastTrack.Performer) ? cue.Performer : lastTrack.Performer;
@@ -65,10 +65,10 @@ class Program
         SplitLast($"{file.DirectoryName}\\{audioFileName}",
             $"{lastTrack.Indices[^1].Minutes}:{lastTrack.Indices[^1].Seconds}",
             outDir.FullName, $"{cue.Tracks.Length:00} {lastTrack.Title}.flac",
-            lastTrack.Title, artistName, cue.Title, cue.Tracks.Length);
+            lastTrack.Title, artistName, cue.Title, cue.Tracks.Length, $"{file.DirectoryName}\\cover.jpg");
     }
 
-    static void Split(string audioFileName, string startTime, string endTime, string outDir, string outFileName, string songName, string artistName, string albumName, int trackIndex)
+    static void Split(string audioFileName, string startTime, string endTime, string outDir, string outFileName, string songName, string artistName, string albumName, int trackIndex, string coverFileName)
     {
         if(File.Exists($"{outDir}\\{outFileName}")) File.Delete($"{outDir}\\{outFileName}");
         using Process ffmpeg = new Process()
@@ -76,7 +76,7 @@ class Program
             StartInfo =
             {
                 FileName = "ffmpeg",
-                Arguments = $"-i \"{audioFileName}\" -ss {startTime} -to {endTime} -metadata title=\"{songName}\" -metadata artist=\"{artistName}\" -metadata album=\"{albumName}\" -metadata track=\"{trackIndex}\" \"{outDir}\\{outFileName}\"",
+                Arguments = $"-i \"{audioFileName}\" -i \"{coverFileName}\" -map 0 -map 1 -ss {startTime} -to {endTime} -metadata title=\"{songName}\" -metadata artist=\"{artistName}\" -metadata album=\"{albumName}\" -metadata track=\"{trackIndex}\" -disposition:v attached_pic \"{outDir}\\{outFileName}\"",
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -90,7 +90,7 @@ class Program
         if (ffmpeg.ExitCode != 0) throw new ApplicationException($"ffmpeg.ExitCode is {ffmpeg.ExitCode},\n{ffmpegOutput}");
     }
 
-    static void SplitLast(string audioFileName, string startTime, string outDir, string outFileName, string songName, string artistName, string albumName, int trackIndex)
+    static void SplitLast(string audioFileName, string startTime, string outDir, string outFileName, string songName, string artistName, string albumName, int trackIndex, string coverFileName)
     {
         using Process ffprobe = new Process()
         {
@@ -107,6 +107,6 @@ class Program
         var ffprobeOutput = ffprobe.StandardOutput.ReadToEnd();
         if (ffprobe.ExitCode != 0)
             throw new Exception($"Failed execute command: \n{ffprobe.StartInfo.FileName} {ffprobe.StartInfo.Arguments}\nresult: {ffprobeOutput}");
-        Split(audioFileName, startTime, ffprobeOutput.TrimEnd(), outDir, outFileName, songName, artistName, albumName, trackIndex);
+        Split(audioFileName, startTime, ffprobeOutput.TrimEnd(), outDir, outFileName, songName, artistName, albumName, trackIndex, coverFileName);
     }
 }
