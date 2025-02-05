@@ -9,23 +9,27 @@ class Program
 {
     static async Task<int> Main(string[] args)
     {
-        var fileOption = new Option<FileInfo?>(
+        var fileOption = new Option<FileInfo>(
             name: "--file",
-            description: "The .cue file.");
+            description: "The .cue file.")
+        {
+            IsRequired = true,
+        };
+        fileOption.AddAlias("-f");
         
-        var outDirOption = new Option<DirectoryInfo?>(
+        var outDirOption = new Option<DirectoryInfo>(
             name: "--out-dir",
-            description: "The output directory.");
+            description: "The output directory.")
+        {
+            IsRequired = true,
+        };
+        outDirOption.AddAlias("-o");
         
         var rootCommand = new RootCommand("According to cue file and album file, split into multiple songs.");
         rootCommand.AddOption(fileOption);
         rootCommand.AddOption(outDirOption);
         
-        rootCommand.SetHandler((file, outDir) => 
-            { 
-                StartSplit(file!, outDir!); 
-            },
-            fileOption, outDirOption);
+        rootCommand.SetHandler(StartSplit, fileOption, outDirOption);
 
         return await rootCommand.InvokeAsync(args);
     }
