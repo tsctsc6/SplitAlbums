@@ -74,13 +74,19 @@ class Program
 
     static void Split(string audioFileName, string startTime, string endTime, string outDir, string outFileName, string songName, string artistName, string albumName, int trackIndex, string coverFileName)
     {
+        if (File.Exists($"{outDir}\\{trackIndex}.flac")) File.Delete($"{outDir}\\{trackIndex}.flac");
         if(File.Exists($"{outDir}\\{outFileName}")) File.Delete($"{outDir}\\{outFileName}");
+        var args =
+            $"-i \"{audioFileName}\" -ss {startTime} -to {endTime} -metadata title=\"{songName}\" -metadata artist=\"{artistName}\" -metadata album=\"{albumName}\" -metadata track=\"{trackIndex}\" -c:a flac \"{outDir}\\{trackIndex}.flac\"";
+        var args_pic =
+            $"-i \"{outDir}\\{trackIndex}.flac\" -i \"{coverFileName}\" -c:v mjpeg -map 0 -map 1 -disposition:v:0 attached_pic -c:a copy \"{outDir}\\{outFileName}\"";
+        
         using Process ffmpeg = new Process()
         {
             StartInfo =
             {
                 FileName = "ffmpeg",
-                Arguments = $"-i \"{audioFileName}\" -i \"{coverFileName}\" -map 0 -map 1 -ss {startTime} -to {endTime} -metadata title=\"{songName}\" -metadata artist=\"{artistName}\" -metadata album=\"{albumName}\" -metadata track=\"{trackIndex}\" -disposition:v attached_pic \"{outDir}\\{outFileName}\"",
+                Arguments = args,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -92,6 +98,26 @@ class Program
         ffmpeg.Start();
         var ffmpegOutput = ffmpeg.StandardOutput.ReadToEnd();
         if (ffmpeg.ExitCode != 0) throw new ApplicationException($"ffmpeg.ExitCode is {ffmpeg.ExitCode},\n{ffmpegOutput}");
+        
+        using Process ffmpeg2 = new Process()
+        {
+            StartInfo =
+            {
+                FileName = "ffmpeg",
+                Arguments = args_pic,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            }
+        };
+        
+        Console.WriteLine($"{ffmpeg2.StartInfo.FileName} {ffmpeg2.StartInfo.Arguments}");
+        
+        ffmpeg2.Start();
+        ffmpegOutput = ffmpeg2.StandardOutput.ReadToEnd();
+        if (ffmpeg2.ExitCode != 0) throw new ApplicationException($"ffmpeg.ExitCode is {ffmpeg.ExitCode},\n{ffmpegOutput}");
+        
+        if (File.Exists($"{outDir}\\{trackIndex}.flac")) File.Delete($"{outDir}\\{trackIndex}.flac");
     }
 
     static void SplitLast(string audioFileName, string startTime, string outDir, string outFileName, string songName, string artistName, string albumName, int trackIndex, string coverFileName)
