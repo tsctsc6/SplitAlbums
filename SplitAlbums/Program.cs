@@ -59,7 +59,7 @@ class Program
             var startIndex = cue.Tracks[i].Indices[^1];
             var endIndex = cue.Tracks[i + 1].Indices[^1];
             var startTimeSpan = TimeSpan.FromMinutes(startIndex.Minutes) + TimeSpan.FromSeconds(startIndex.Seconds);
-            var endTimeSpan = TimeSpan.FromMinutes(endIndex.Minutes) + TimeSpan.FromSeconds(endIndex.Seconds - 1);
+            var endTimeSpan = TimeSpan.FromMinutes(endIndex.Minutes) + TimeSpan.FromSeconds(endIndex.Seconds);
             
             Split($"{file.DirectoryName}\\{audioFileName}",
                 $"{startTimeSpan}", $"{endTimeSpan}",
