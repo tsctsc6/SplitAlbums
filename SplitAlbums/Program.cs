@@ -50,7 +50,7 @@ class Program
             {
                 // 这个 FILE 的最后一个 TRACK
                 SplitLast($"{file.DirectoryName}\\{audioFileName}",
-                    $"{cue.Tracks[i].Indices[^1].Minutes}:{cue.Tracks[i].Indices[^1].Seconds}",
+                    $"{cue.Tracks[i].Indices[^1].Minutes * 60 + cue.Tracks[i].Indices[^1].Seconds}",
                     outDir.FullName, $"{i + 1:00} {cue.Tracks[i].Title}.flac",
                     cue.Tracks[i].Title, artistName, cue.Title, i + 1, $"{file.DirectoryName}\\cover.jpg");
                 continue;
@@ -58,11 +58,11 @@ class Program
             
             var startIndex = cue.Tracks[i].Indices[^1];
             var endIndex = cue.Tracks[i + 1].Indices[^1];
-            var startTimeSpan = TimeSpan.FromMinutes(startIndex.Minutes) + TimeSpan.FromSeconds(startIndex.Seconds);
-            var endTimeSpan = TimeSpan.FromMinutes(endIndex.Minutes) + TimeSpan.FromSeconds(endIndex.Seconds);
+            var startTimeInSeconds = startIndex.Minutes * 60 + startIndex.Seconds;
+            var endTimeInSeconds = endIndex.Minutes * 60 + endIndex.Seconds;
             
             Split($"{file.DirectoryName}\\{audioFileName}",
-                $"{startTimeSpan}", $"{endTimeSpan}",
+                $"{startTimeInSeconds}", $"{endTimeInSeconds}",
                 outDir.FullName, $"{i + 1:00} {cue.Tracks[i].Title}.flac",
                 cue.Tracks[i].Title, artistName, cue.Title, i + 1, $"{file.DirectoryName}\\cover.jpg");
         }
@@ -70,7 +70,7 @@ class Program
         artistName = string.IsNullOrEmpty(lastTrack.Performer) ? cue.Performer : lastTrack.Performer;
         if (!string.IsNullOrEmpty(lastTrack.DataFile.Filename)) audioFileName = lastTrack.DataFile.Filename;
         SplitLast($"{file.DirectoryName}\\{audioFileName}",
-            $"{lastTrack.Indices[^1].Minutes}:{lastTrack.Indices[^1].Seconds}",
+            $"{lastTrack.Indices[^1].Minutes * 60 + lastTrack.Indices[^1].Seconds}",
             outDir.FullName, $"{cue.Tracks.Length:00} {lastTrack.Title}.flac",
             lastTrack.Title, artistName, cue.Title, cue.Tracks.Length, $"{file.DirectoryName}\\cover.jpg");
     }
