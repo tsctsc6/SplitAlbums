@@ -80,9 +80,9 @@ class Program
         if (File.Exists($"{outDir}\\{trackIndex}.flac")) File.Delete($"{outDir}\\{trackIndex}.flac");
         if(File.Exists($"{outDir}\\{outFileName}")) File.Delete($"{outDir}\\{outFileName}");
         var args =
-            $"-i \"{audioFileName}\" -ss {startTime} -to {endTime} -metadata title=\"{songName}\" -metadata artist=\"{artistName}\" -metadata album=\"{albumName}\" -metadata track=\"{trackIndex}\" -c:a flac \"{outDir}\\{trackIndex}.flac\"";
+            $"-v error -i \"{audioFileName}\" -ss {startTime} -to {endTime} -metadata title=\"{songName}\" -metadata artist=\"{artistName}\" -metadata album=\"{albumName}\" -metadata track=\"{trackIndex}\" -c:a flac \"{outDir}\\{trackIndex}.flac\"";
         var args_pic =
-            $"-i \"{outDir}\\{trackIndex}.flac\" -i \"{coverFileName}\" -c:v mjpeg -map 0 -map 1 -disposition:v:0 attached_pic -c:a copy \"{outDir}\\{outFileName}\"";
+            $"-v error -i \"{outDir}\\{trackIndex}.flac\" -i \"{coverFileName}\" -c:v mjpeg -map 0 -map 1 -disposition:v:0 attached_pic -c:a copy \"{outDir}\\{outFileName}\"";
         
         using Process ffmpeg = new Process()
         {
@@ -99,8 +99,8 @@ class Program
         Console.WriteLine($"{ffmpeg.StartInfo.FileName} {ffmpeg.StartInfo.Arguments}");
         
         ffmpeg.Start();
-        var ffmpegOutput = ffmpeg.StandardOutput.ReadToEnd();
-        if (ffmpeg.ExitCode != 0) throw new ApplicationException($"ffmpeg.ExitCode is {ffmpeg.ExitCode},\n{ffmpegOutput}");
+        var ffmpegError = ffmpeg.StandardError.ReadToEnd();
+        if (ffmpeg.ExitCode != 0) throw new ApplicationException($"ffmpeg.ExitCode is {ffmpeg.ExitCode},\n{ffmpegError}");
         
         using Process ffmpeg2 = new Process()
         {
@@ -117,8 +117,8 @@ class Program
         Console.WriteLine($"{ffmpeg2.StartInfo.FileName} {ffmpeg2.StartInfo.Arguments}");
         
         ffmpeg2.Start();
-        ffmpegOutput = ffmpeg2.StandardOutput.ReadToEnd();
-        if (ffmpeg2.ExitCode != 0) throw new ApplicationException($"ffmpeg.ExitCode is {ffmpeg.ExitCode},\n{ffmpegOutput}");
+        ffmpegError = ffmpeg2.StandardError.ReadToEnd();
+        if (ffmpeg2.ExitCode != 0) throw new ApplicationException($"ffmpeg.ExitCode is {ffmpeg.ExitCode},\n{ffmpegError}");
         
         if (File.Exists($"{outDir}\\{trackIndex}.flac")) File.Delete($"{outDir}\\{trackIndex}.flac");
     }
