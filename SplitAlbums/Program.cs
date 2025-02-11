@@ -51,19 +51,17 @@ class Program
             {
                 // 这个 FILE 的最后一个 TRACK
                 SplitLast($"{file.DirectoryName}\\{audioFileName}",
-                    $"{cue.Tracks[i].Indices[^1].Minutes * 60 + cue.Tracks[i].Indices[^1].Seconds}",
+                    $"{GetCutPoint(cue.Tracks[i].Indices):0.000000}",
                     outDir.FullName, $"{i + 1:00} {cue.Tracks[i].Title}.flac",
                     cue.Tracks[i].Title, artistName, cue.Title, i + 1, $"{file.DirectoryName}\\cover.jpg");
                 continue;
             }
             
-            var startIndex = cue.Tracks[i].Indices[^1];
-            var endIndex = cue.Tracks[i + 1].Indices[^1];
-            var startTimeInSeconds = startIndex.Minutes * 60 + startIndex.Seconds;
-            var endTimeInSeconds = endIndex.Minutes * 60 + endIndex.Seconds;
+            var startCutPoint = GetCutPoint(cue.Tracks[i].Indices);
+            var endCutPoint = GetCutPoint(cue.Tracks[i + 1].Indices);
             
             Split($"{file.DirectoryName}\\{audioFileName}",
-                $"{startTimeInSeconds}", $"{endTimeInSeconds}",
+                $"{startCutPoint:0.000000}", $"{endCutPoint:0.000000}",
                 outDir.FullName, $"{i + 1:00} {cue.Tracks[i].Title}.flac",
                 cue.Tracks[i].Title, artistName, cue.Title, i + 1, $"{file.DirectoryName}\\cover.jpg");
         }
@@ -71,18 +69,29 @@ class Program
         artistName = string.IsNullOrEmpty(lastTrack.Performer) ? cue.Performer : lastTrack.Performer;
         if (!string.IsNullOrEmpty(lastTrack.DataFile.Filename)) audioFileName = lastTrack.DataFile.Filename;
         SplitLast($"{file.DirectoryName}\\{audioFileName}",
-            $"{lastTrack.Indices[^1].Minutes * 60 + lastTrack.Indices[^1].Seconds}",
+            $"{GetCutPoint(cue.Tracks[^1].Indices):0.000000}",
             outDir.FullName, $"{cue.Tracks.Length:00} {lastTrack.Title}.flac",
             lastTrack.Title, artistName, cue.Title, cue.Tracks.Length, $"{file.DirectoryName}\\cover.jpg");
     }
 
+    static double GetCutPoint(CueSharp.Index[] indices)
+    {
+        return indices.Length switch
+        {
+            1 => indices[0].Minutes * 60 + indices[0].Seconds + indices[0].Frames / 75.0,
+            2 => (indices[0].Minutes * 60 + indices[0].Seconds + indices[0].Frames / 75.0 +
+                  indices[1].Minutes * 60 + indices[1].Seconds + indices[1].Frames / 75.0) / 2.0,
+            _ => -1.0
+        };
+    }
+    
     static void Split(string audioFileName, string startTime, string endTime, string outDir, string outFileName, string songName, string artistName, string albumName, int trackIndex, string coverFileName)
     {
         if (File.Exists($"{outDir}\\{trackIndex}.flac")) File.Delete($"{outDir}\\{trackIndex}.flac");
         if(File.Exists($"{outDir}\\{outFileName}")) File.Delete($"{outDir}\\{outFileName}");
-        var args_cut =
+        var argsCut =
             $"-v error -i \"{audioFileName}\" -ss {startTime} -to {endTime} -metadata title=\"{songName}\" -metadata artist=\"{artistName}\" -metadata album=\"{albumName}\" -metadata track=\"{trackIndex}\" -c:a flac \"{outDir}\\{trackIndex}.flac\"";
-        var args_pic =
+        var argsPic =
             $"-v error -i \"{outDir}\\{trackIndex}.flac\" -i \"{coverFileName}\" -c:v mjpeg -map 0 -map 1 -disposition:v:0 attached_pic -c:a copy \"{outDir}\\{outFileName}\"";
         
         using Process ffmpeg = new Process()
@@ -90,7 +99,7 @@ class Program
             StartInfo =
             {
                 FileName = "ffmpeg",
-                Arguments = args_cut,
+                Arguments = argsCut,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -111,7 +120,7 @@ class Program
             StartInfo =
             {
                 FileName = "ffmpeg",
-                Arguments = args_pic,
+                Arguments = argsPic,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
