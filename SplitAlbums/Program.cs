@@ -1,5 +1,6 @@
 ﻿using System.CommandLine;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using CueSharp;
 
@@ -100,7 +101,10 @@ class Program
         
         ffmpeg.Start();
         var ffmpegError = ffmpeg.StandardError.ReadToEnd();
-        if (ffmpeg.ExitCode != 0) throw new ApplicationException($"ffmpeg.ExitCode is {ffmpeg.ExitCode},\n{ffmpegError}");
+        if (ffmpeg.ExitCode != 0)
+        {
+            ShowErrorAndExit($"{Environment.NewLine}ffmpeg.ExitCode is {ffmpeg.ExitCode},{Environment.NewLine}{ffmpegError}", 1);
+        }
         
         using Process ffmpeg2 = new Process()
         {
@@ -118,7 +122,10 @@ class Program
         
         ffmpeg2.Start();
         ffmpegError = ffmpeg2.StandardError.ReadToEnd();
-        if (ffmpeg2.ExitCode != 0) throw new ApplicationException($"ffmpeg.ExitCode is {ffmpeg.ExitCode},\n{ffmpegError}");
+        if (ffmpeg2.ExitCode != 0)
+        {
+            ShowErrorAndExit($"{Environment.NewLine}ffmpeg.ExitCode is {ffmpeg.ExitCode},{Environment.NewLine}{ffmpegError}", 1);
+        }
         
         if (File.Exists($"{outDir}\\{trackIndex}.flac")) File.Delete($"{outDir}\\{trackIndex}.flac");
     }
@@ -139,7 +146,21 @@ class Program
         ffprobe.Start();
         var ffprobeOutput = ffprobe.StandardOutput.ReadToEnd();
         if (ffprobe.ExitCode != 0)
-            throw new Exception($"Failed execute command: \n{ffprobe.StartInfo.FileName} {ffprobe.StartInfo.Arguments}\nresult: {ffprobeOutput}");
+        {
+            ShowErrorAndExit(
+                $"Failed execute command: {Environment.NewLine}{ffprobe.StartInfo.FileName} {ffprobe.StartInfo.Arguments}{Environment.NewLine}result: {ffprobeOutput}",
+                1);
+        }
         Split(audioFileName, startTime, ffprobeOutput.TrimEnd(), outDir, outFileName, songName, artistName, albumName, trackIndex, coverFileName);
+    }
+    
+    [DoesNotReturn]
+    static void ShowErrorAndExit(string error, int exitCode)
+    {
+        var defaultColor = Console.ForegroundColor;
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.Error.WriteLine(error);
+        Console.ForegroundColor = defaultColor;
+        Environment.Exit(exitCode);
     }
 }
