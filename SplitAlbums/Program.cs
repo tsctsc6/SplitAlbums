@@ -25,17 +25,25 @@ class Program
             IsRequired = true,
         };
         outDirOption.AddAlias("-o");
+
+        var noCoverOption = new Option<bool>(
+            name: "--no-cover",
+            description: "Do not show cover image.")
+        {
+            Arity = ArgumentArity.ZeroOrOne,
+        };
         
         var rootCommand = new RootCommand("According to cue file and album file, split into multiple songs.");
         rootCommand.AddOption(fileOption);
         rootCommand.AddOption(outDirOption);
+        rootCommand.AddOption(noCoverOption);
         
-        rootCommand.SetHandler(StartSplit, fileOption, outDirOption);
+        rootCommand.SetHandler(StartSplit, fileOption, outDirOption, noCoverOption);
 
         return await rootCommand.InvokeAsync(args);
     }
     
-    static void StartSplit(FileInfo file, DirectoryInfo outDir)
+    static void StartSplit(FileInfo file, DirectoryInfo outDir, bool noCover)
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         var gb2312 = Encoding.GetEncoding("GB2312");
@@ -53,7 +61,7 @@ class Program
                 SplitLast($"{file.DirectoryName}\\{audioFileName}",
                     $"{GetCutPoint(cue.Tracks[i].Indices):0.000000}",
                     outDir.FullName, $"{i + 1:00} {cue.Tracks[i].Title}.flac",
-                    cue.Tracks[i].Title, artistName, cue.Title, i + 1, $"{file.DirectoryName}\\cover.jpg");
+                    cue.Tracks[i].Title, artistName, cue.Title, i + 1, $"{file.DirectoryName}\\cover.jpg", noCover);
                 continue;
             }
             
@@ -63,7 +71,7 @@ class Program
             Split($"{file.DirectoryName}\\{audioFileName}",
                 $"{startCutPoint:0.000000}", $"{endCutPoint:0.000000}",
                 outDir.FullName, $"{i + 1:00} {cue.Tracks[i].Title}.flac",
-                cue.Tracks[i].Title, artistName, cue.Title, i + 1, $"{file.DirectoryName}\\cover.jpg");
+                cue.Tracks[i].Title, artistName, cue.Title, i + 1, $"{file.DirectoryName}\\cover.jpg", noCover);
         }
         var lastTrack = cue.Tracks[^1];
         artistName = string.IsNullOrEmpty(lastTrack.Performer) ? cue.Performer : lastTrack.Performer;
@@ -71,7 +79,7 @@ class Program
         SplitLast($"{file.DirectoryName}\\{audioFileName}",
             $"{GetCutPoint(cue.Tracks[^1].Indices):0.000000}",
             outDir.FullName, $"{cue.Tracks.Length:00} {lastTrack.Title}.flac",
-            lastTrack.Title, artistName, cue.Title, cue.Tracks.Length, $"{file.DirectoryName}\\cover.jpg");
+            lastTrack.Title, artistName, cue.Title, cue.Tracks.Length, $"{file.DirectoryName}\\cover.jpg", noCover);
     }
 
     static double GetCutPoint(CueSharp.Index[] indices)
@@ -85,12 +93,21 @@ class Program
         };
     }
     
-    static void Split(string audioFileName, string startTime, string endTime, string outDir, string outFileName, string songName, string artistName, string albumName, int trackIndex, string coverFileName)
+    static void Split(string audioFileName, string startTime, string endTime, string outDir, string outFileName, string songName, string artistName, string albumName, int trackIndex, string coverFileName, bool noCover)
     {
         if (File.Exists($"{outDir}\\{trackIndex}.flac")) File.Delete($"{outDir}\\{trackIndex}.flac");
         if(File.Exists($"{outDir}\\{outFileName}")) File.Delete($"{outDir}\\{outFileName}");
-        var argsCut =
-            $"-v error -i \"{audioFileName}\" -ss {startTime} -to {endTime} -metadata title=\"{songName}\" -metadata artist=\"{artistName}\" -metadata album=\"{albumName}\" -metadata track=\"{trackIndex}\" -c:a flac \"{outDir}\\{trackIndex}.flac\"";
+        var argsCut = string.Empty;
+        if (noCover)
+        {
+            argsCut =
+                $"-v error -i \"{audioFileName}\" -ss {startTime} -to {endTime} -metadata title=\"{songName}\" -metadata artist=\"{artistName}\" -metadata album=\"{albumName}\" -metadata track=\"{trackIndex}\" -c:a flac \"{outDir}\\{outFileName}\"";
+        }
+        else
+        {
+            argsCut =
+                $"-v error -i \"{audioFileName}\" -ss {startTime} -to {endTime} -metadata title=\"{songName}\" -metadata artist=\"{artistName}\" -metadata album=\"{albumName}\" -metadata track=\"{trackIndex}\" -c:a flac \"{outDir}\\{trackIndex}.flac\"";
+        }
         var argsPic =
             $"-v error -i \"{outDir}\\{trackIndex}.flac\" -i \"{coverFileName}\" -c:v mjpeg -map 0 -map 1 -disposition:v:0 attached_pic -c:a copy \"{outDir}\\{outFileName}\"";
         
@@ -114,6 +131,8 @@ class Program
         {
             ShowErrorAndExit($"{Environment.NewLine}ffmpeg.ExitCode is {ffmpeg.ExitCode},{Environment.NewLine}{ffmpegError}", 1);
         }
+        
+        if (noCover) return;
         
         using Process ffmpeg2 = new Process()
         {
@@ -139,7 +158,7 @@ class Program
         if (File.Exists($"{outDir}\\{trackIndex}.flac")) File.Delete($"{outDir}\\{trackIndex}.flac");
     }
 
-    static void SplitLast(string audioFileName, string startTime, string outDir, string outFileName, string songName, string artistName, string albumName, int trackIndex, string coverFileName)
+    static void SplitLast(string audioFileName, string startTime, string outDir, string outFileName, string songName, string artistName, string albumName, int trackIndex, string coverFileName, bool noCover)
     {
         using Process ffprobe = new Process()
         {
@@ -160,7 +179,7 @@ class Program
                 $"Failed execute command: {Environment.NewLine}{ffprobe.StartInfo.FileName} {ffprobe.StartInfo.Arguments}{Environment.NewLine}result: {ffprobeOutput}",
                 1);
         }
-        Split(audioFileName, startTime, ffprobeOutput.TrimEnd(), outDir, outFileName, songName, artistName, albumName, trackIndex, coverFileName);
+        Split(audioFileName, startTime, ffprobeOutput.TrimEnd(), outDir, outFileName, songName, artistName, albumName, trackIndex, coverFileName, noCover);
     }
     
     [DoesNotReturn]
