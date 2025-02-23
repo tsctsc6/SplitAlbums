@@ -26,15 +26,13 @@ class Program
         };
         outDirOption.AddAlias("-o");
 
-        var sampleRateOption = new Option<int>(
+        var sampleRateOption = new Option<int?>(
             name: "-ar",
-            description: "The sample rate.",
-            getDefaultValue: () => 44100);
+            description: "The sample rate.");
         
-        var sampleFormatOption = new Option<string>(
+        var sampleFormatOption = new Option<string?>(
             name: "-sample_fmt",
-            description: "The sample format.",
-            getDefaultValue: () => "s16");
+            description: "The sample format.");
 
         var noCoverOption = new Option<bool>(
             name: "--no-cover",
@@ -55,7 +53,7 @@ class Program
         return await rootCommand.InvokeAsync(args);
     }
     
-    static void StartSplit(FileInfo file, DirectoryInfo outDir, int sampleRate, string sampleFormat, bool noCover)
+    static void StartSplit(FileInfo file, DirectoryInfo outDir, int? sampleRate, string? sampleFormat, bool noCover)
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         var gb2312 = Encoding.GetEncoding("GB2312");
@@ -105,20 +103,29 @@ class Program
         };
     }
     
-    static void Split(string audioFileName, string startTime, string endTime, string outDir, string outFileName, string songName, string artistName, string albumName, int trackIndex, string coverFileName, int sampleRate, string sampleFormat, bool noCover)
+    static void Split(string audioFileName, string startTime, string endTime, string outDir, string outFileName, string songName, string artistName, string albumName, int trackIndex, string coverFileName, int? sampleRate, string? sampleFormat, bool noCover)
     {
         if (File.Exists($"{outDir}\\{trackIndex}.flac")) File.Delete($"{outDir}\\{trackIndex}.flac");
         if(File.Exists($"{outDir}\\{outFileName}")) File.Delete($"{outDir}\\{outFileName}");
         var argsCut = string.Empty;
+        var sample_args = string.Empty;
+        if (sampleRate != null)
+        {
+            sample_args += $"-ar {sampleRate} ";
+        }
+        if (sampleFormat != null)
+        {
+            sample_args += $"-sample_fmt {sampleFormat} ";
+        }
         if (noCover)
         {
             argsCut =
-                $"-v error -i \"{audioFileName}\" -ss {startTime} -to {endTime} -metadata title=\"{songName}\" -metadata artist=\"{artistName}\" -metadata album=\"{albumName}\" -metadata track=\"{trackIndex}\" -c:a flac -ar {sampleRate} -sample_fmt {sampleFormat} \"{outDir}\\{outFileName}\"";
+                $"-v error -i \"{audioFileName}\" -ss {startTime} -to {endTime} -metadata title=\"{songName}\" -metadata artist=\"{artistName}\" -metadata album=\"{albumName}\" -metadata track=\"{trackIndex}\" -c:a flac {sample_args}\"{outDir}\\{outFileName}\"";
         }
         else
         {
             argsCut =
-                $"-v error -i \"{audioFileName}\" -ss {startTime} -to {endTime} -metadata title=\"{songName}\" -metadata artist=\"{artistName}\" -metadata album=\"{albumName}\" -metadata track=\"{trackIndex}\" -c:a flac -ar {sampleRate} -sample_fmt {sampleFormat} \"{outDir}\\{trackIndex}.flac\"";
+                $"-v error -i \"{audioFileName}\" -ss {startTime} -to {endTime} -metadata title=\"{songName}\" -metadata artist=\"{artistName}\" -metadata album=\"{albumName}\" -metadata track=\"{trackIndex}\" -c:a flac {sample_args}\"{outDir}\\{trackIndex}.flac\"";
         }
         var argsPic =
             $"-v error -i \"{outDir}\\{trackIndex}.flac\" -i \"{coverFileName}\" -c:v mjpeg -map 0 -map 1 -disposition:v:0 attached_pic -c:a copy \"{outDir}\\{outFileName}\"";
@@ -170,7 +177,7 @@ class Program
         if (File.Exists($"{outDir}\\{trackIndex}.flac")) File.Delete($"{outDir}\\{trackIndex}.flac");
     }
 
-    static void SplitLast(string audioFileName, string startTime, string outDir, string outFileName, string songName, string artistName, string albumName, int trackIndex, string coverFileName, int sampleRate, string sampleFormat, bool noCover)
+    static void SplitLast(string audioFileName, string startTime, string outDir, string outFileName, string songName, string artistName, string albumName, int trackIndex, string coverFileName, int? sampleRate, string? sampleFormat, bool noCover)
     {
         using Process ffprobe = new Process()
         {
